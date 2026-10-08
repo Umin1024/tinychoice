@@ -1,0 +1,134 @@
+﻿<!--save as html file-->
+<html  dir="auto" >
+<head>
+<link rel="icon" 
+      type="image/png" 
+      href="favicon.png">
+<title>game</title>
+<style>
+	body {
+		margin:40px;
+		padding:40px;
+	}
+</style>
+<script>
+
+var embedDat = "%7B%221%22:%5B%5B%22What's%20the%20topic?%22%5D,%5B%22%22%5D,%5B%22Virtual%20space%20and%20net%20art%22,%222%22%5D,%5B%22City%20animals%20and%20plants%20Exploration%22,%223%22%5D,%5B%22%22%5D%5D,%222%22:%5B%5B%22do%20they%20want%20to%20learn%20how%20to%20code?%22%5D,%5B%22yes%22,%224%22%5D,%5B%22no%22,%225%22%5D,%5B%22%22%5D%5D,%223%22:%5B%5B%22Nope%20no%20this%20one%20today%22,%22START%22%5D,%5B%22%22%5D%5D,%224%22:%5B%5B%22Ok,%20you%20spend%203%20hours,%20but%20no%20one%20want%20to%20focus%22,%22START%22%5D,%5B%22%22%5D%5D,%225%22:%5B%5B%22play%20some%20games%22%5D,%5B%22%22%5D,%5B%22everyone%20is%20happy%22,%22START%22%5D%5D,%22START%22:%5B%5B%22The%20semester%20will%20start!!%22%5D,%5B%22I%20have%20a%20class%20tomorrow%22,%221%22%5D,%5B%22%22%5D%5D,%22__STARTSECTION__%22:%22START%22%7D";
+
+var gameState = null;
+
+
+var aurl = document.createElement('a');
+function qualifyURL(url) {
+ aurl.href = url;
+ return aurl.href;
+}
+
+function getParameterByName(name) {
+    name = name.replace(/[\[]/, "\\\[").replace(/[\]]/, "\\\]");
+    var regex = new RegExp("[\\?&]" + name + "=([^&#]*)"),
+        results = regex.exec(location.search);
+    return results == null ? "" : decodeURIComponent(results[1].replace(/\+/g, " "));
+}
+
+function strip_http(url) {
+   url = url.replace(/^https?:\/\//,'');
+   return url;
+}
+
+function startSection(){
+  if (gameState==null){
+    return "";
+  }
+  var param = getParameterByName("section");
+
+  var result = "__STARTSECTION__" in gameState ? gameState["__STARTSECTION__"] : "START";
+  if (param.length>0){
+    result=param;
+  }
+
+  return result;
+}
+
+function init(){
+	if (embedDat.length>0 && embedDat[0]!=='_'){
+		var dat = decodeURI(embedDat);
+		gameState = JSON.parse(dat);
+    var startKey = startSection();
+		goTo(startKey);
+		return;
+	}
+
+var id = getParameterByName("p").replace(/[\\\/]/,"");
+  if (id===null||id.length===0) {
+    console.log("No ID specified in URL.")
+    return;
+  }
+
+  var githubURL = 'https://api.github.com/gists/'+id;
+
+  var githubHTTPClient = new XMLHttpRequest();
+  githubHTTPClient.open('GET', githubURL);
+  githubHTTPClient.onreadystatechange = function() {
+    if(githubHTTPClient.readyState!=4) {
+      return;
+    }   
+    var result = JSON.parse(githubHTTPClient.responseText);
+    if (githubHTTPClient.status===403) {
+      console.log(result.message);
+    } else if (githubHTTPClient.status!==200&&githubHTTPClient.status!==201) {
+      console.log("HTTP Error "+ githubHTTPClient.status + ' - ' + githubHTTPClient.statusText);
+    }
+    var result = JSON.parse(githubHTTPClient.responseText);
+    var code=result["files"]["game.txt"]["content"];
+    console.log(code);
+
+	gameState = JSON.parse(code);
+	goTo(startSection());
+  }
+  githubHTTPClient.setRequestHeader("Content-type","application/x-www-form-urlencoded");
+  githubHTTPClient.send();
+
+	goTo(startSection());
+}	
+
+function escapeHtmlEntities (str) {
+  if (typeof jQuery !== 'undefined') {
+    // Create an empty div to use as a container,
+    // then put the raw text in and get the HTML
+    // equivalent out.
+    return jQuery('<div/>').text(str).html();
+  }
+
+  // No jQuery, so use string replace.
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/>/g, '&gt;')
+    .replace(/</g, '&lt;')
+    .replace(/"/g, '&quot;');
+}
+
+function goTo(targetState){
+  if (gameState==null){
+    return;
+  }
+	var curstate = gameState[targetState];
+	var gameArea = document.getElementById("gameArea");
+	var str = "";
+	for (var i=0;i<curstate.length;i++){
+		var l = curstate[i];
+		if (l.length==1){			
+			str+=escapeHtmlEntities(l[0])+"<br>";
+		} else if (l.length==2){
+			str+='<a href="#" onclick="goTo(\''+escapeHtmlEntities(l[1])+'\');return false;">'+escapeHtmlEntities(l[0])+'</a><br>';
+		}	
+	}
+	gameArea.innerHTML=str;
+}
+
+</script>
+</head>
+<body onload="init();" dir="auto">
+<div id="gameArea" dir="auto"></div>
+</body>
+</html>
